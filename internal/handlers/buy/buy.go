@@ -1,0 +1,68 @@
+package buy
+
+import (
+	"errors"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/render"
+	"github.com/l-golofastov/Merch-Shop-Api/internal/handlers"
+	"github.com/l-golofastov/Merch-Shop-Api/internal/lib/api/errresp"
+	"github.com/l-golofastov/Merch-Shop-Api/internal/lib/logger/sl"
+	"github.com/l-golofastov/Merch-Shop-Api/internal/storage"
+	"log/slog"
+	"net/http"
+)
+
+type Buyer interface {
+	CheckPassword(username, passwordHash string) (int, error)
+	BuyItem(itemName string, userId int) error
+}
+
+func NewBuyerHandler(log *slog.Logger, b Buyer) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		const op = "handlers.sendCoins.NewBuyerHandler"
+
+		log = log.With(
+			slog.String("op", op),
+			slog.String("request_id", middleware.GetReqID(r.Context())),
+		)
+
+		id, _, _ := handlers.Authorize(w, r, b)
+
+		log.Info("user authorized")
+
+		itemName := chi.URLParam(r, "item")
+		if itemName == "" {
+			log.Info("no item name provided")
+
+			render.Status(r, http.StatusBadRequest)
+			render.JSON(w, r, errresp.Error("no item name provided"))
+
+			return
+		}
+
+		err := b.BuyItem(itemName, id)
+		if err != nil {
+			if errors.Is(err, storage.ErrItemNotFound) {
+				render.Status(r, http.StatusBadRequest)
+				render.JSON(w, r, errresp.Error("item not found"))
+
+				return
+			} else if errors.Is(err, storage.ErrNotEnoughCoins) {
+				render.Status(r, http.StatusBadRequest)
+				render.JSON(w, r, errresp.Error("not enough coins to buy"))
+
+				return
+			}
+			log.Error("failed to buy item", sl.Err(err))
+
+			render.Status(r, http.StatusInternalServerError)
+			render.JSON(w, r, errresp.Error("failed to buy item"))
+
+			return
+		}
+
+		render.Status(r, http.StatusOK)
+		render.JSON(w, r, nil) //TODO: Maybe should be omitted
+	}
+}

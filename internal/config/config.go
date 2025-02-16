@@ -1,38 +1,40 @@
 package config
 
 import (
-	"github.com/ilyakaznacheev/cleanenv"
+	"github.com/joho/godotenv"
+	"github.com/kelseyhightower/envconfig"
 	"log"
-	"os"
 	"time"
 )
 
 type Config struct {
-	Env            string `yaml:"env" env:"ENV"`
-	StorageConnStr string `yaml:"storage_conn_str" env:"STORAGE_CONN_STR"`
-	HttpServer     `yaml:"http_server" env:"HTTP_SERVER"`
+	HttpServer
+	Postgres
 }
 
 type HttpServer struct {
-	Address     string        `yaml:"address" env:"HTTP_ADDRESS" env-default:"localhost:8080"`
-	Timeout     time.Duration `yaml:"timeout" env:"HTTP_TIMEOUT" env-default:"4s"`
-	IdleTimeout time.Duration `yaml:"idle_timeout" env:"HTTP_IDLE_TIMEOUT" env-default:"60s"`
+	ServerAddress string        `envconfig:"SERVER_ADDRESS" default:"localhost:8080"`
+	Timeout       time.Duration `envconfig:"SERVER_TIMEOUT" default:"4s"`
+	IdleTimeout   time.Duration `envconfig:"SERVER_IDLE_TIMEOUT" default:"60s"`
+}
+
+type Postgres struct {
+	Host     string `envconfig:"POSTGRES_HOST"`
+	Port     int    `envconfig:"POSTGRES_PORT"`
+	Username string `envconfig:"POSTGRES_USERNAME"`
+	Password string `envconfig:"POSTGRES_PASSWORD"`
+	DBName   string `envconfig:"POSTGRES_DBNAME"`
 }
 
 func MustLoad() *Config {
-	configPath := os.Getenv("CONFIG_PATH")
-	if configPath == "" {
-		log.Fatal("CONFIG_PATH environment variable not set")
-	}
-
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		log.Fatalf("config file does not exist: %s", configPath)
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("Error loading env variables", err)
 	}
 
 	var cfg Config
-
-	if err := cleanenv.ReadConfig(configPath, &cfg); err != nil {
-		log.Fatalf("failed to read config: %s", err)
+	err := envconfig.Process("", &cfg)
+	if err != nil {
+		log.Fatal("Error processing env variables:", err)
 	}
 
 	return &cfg
