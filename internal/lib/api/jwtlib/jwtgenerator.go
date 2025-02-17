@@ -2,10 +2,11 @@ package jwtlib
 
 import (
 	"github.com/golang-jwt/jwt"
+	"os"
 	"time"
 )
 
-var jwtSecret = []byte("81b3b7186fb2bf989eba8f76f3c98040e19f2b8b4b3730d5593b2a88e2f9ec11")
+var jwtSecret = []byte(os.Getenv("JWT_SECRET"))
 
 func GenerateJWT(userId int, username, passwordHash string) (string, error) {
 	claims := jwt.MapClaims{

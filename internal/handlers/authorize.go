@@ -13,7 +13,7 @@ type Authorizer interface {
 }
 
 func Authorize(w http.ResponseWriter, r *http.Request, a Authorizer) (int, string, string) {
-	userId := r.Context().Value("user_id").(int)
+	userId := int(r.Context().Value("user_id").(float64))
 	username := r.Context().Value("username").(string)
 	passwordHash := r.Context().Value("password_hash").(string)
 
@@ -21,7 +21,7 @@ func Authorize(w http.ResponseWriter, r *http.Request, a Authorizer) (int, strin
 	if err != nil {
 		if errors.Is(err, storage.ErrPasswordUnmatched) {
 			render.Status(r, http.StatusUnauthorized)
-			render.JSON(w, r, errresp.Error("invalid token claims"))
+			render.JSON(w, r, errresp.Error("invalid token claims: password"))
 
 			return 0, "", ""
 		}
@@ -33,7 +33,7 @@ func Authorize(w http.ResponseWriter, r *http.Request, a Authorizer) (int, strin
 
 	if id != userId {
 		render.Status(r, http.StatusUnauthorized)
-		render.JSON(w, r, errresp.Error("invalid token claims"))
+		render.JSON(w, r, errresp.Error("invalid token claims: id"))
 
 		return 0, "", ""
 	}

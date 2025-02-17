@@ -27,6 +27,8 @@ type AuthHandler interface {
 	CreateUser(username, passwordHash string) (int, error)
 	FindUserByUsername(username string) (int, error)
 	CheckPassword(username, passwordHash string) (int, error)
+	GetPasswordHashByUsername(username string) (string, error)
+	UpdateUserPasswordHash(id int, hash string) error
 }
 
 func NewAuthHandler(log *slog.Logger, ah AuthHandler) http.HandlerFunc {
@@ -84,18 +86,29 @@ func NewAuthHandler(log *slog.Logger, ah AuthHandler) http.HandlerFunc {
 		}
 
 		if id != -1 {
-			id, err = ah.CheckPassword(req.Username, passwordHash)
+			hash, err := ah.GetPasswordHashByUsername(req.Username)
 			if err != nil {
-				if errors.Is(err, storage.ErrPasswordUnmatched) {
-					render.Status(r, http.StatusUnauthorized)
-					render.JSON(w, r, errresp.Error("invalid password"))
-
-					return
-				}
-				log.Error("failed to check user password", sl.Err(err))
+				log.Error("failed to get user password hash", sl.Err(err))
 
 				render.Status(r, http.StatusInternalServerError)
-				render.JSON(w, r, errresp.Error("failed to check user password"))
+				render.JSON(w, r, errresp.Error("failed to get user password hash"))
+
+				return
+			}
+
+			if err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(req.Password)); err != nil {
+				render.Status(r, http.StatusUnauthorized)
+				render.JSON(w, r, errresp.Error("invalid password"))
+
+				return
+			}
+
+			err = ah.UpdateUserPasswordHash(id, passwordHash)
+			if err != nil {
+				log.Error("failed to update user password hash", sl.Err(err))
+
+				render.Status(r, http.StatusInternalServerError)
+				render.JSON(w, r, errresp.Error("failed to update user password hash"))
 
 				return
 			}

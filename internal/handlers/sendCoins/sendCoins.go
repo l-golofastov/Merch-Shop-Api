@@ -33,8 +33,11 @@ func NewCoinSenderHandler(log *slog.Logger, cs CoinSender) http.HandlerFunc {
 		)
 
 		id, _, _ := handlers.Authorize(w, r, cs)
-
-		log.Info("user authorized")
+		if id != 0 {
+			log.Info("user authorized")
+		} else {
+			return
+		}
 
 		var req SendCoinRequest
 
@@ -81,6 +84,5 @@ func NewCoinSenderHandler(log *slog.Logger, cs CoinSender) http.HandlerFunc {
 		}
 
 		render.Status(r, http.StatusOK)
-		render.JSON(w, r, nil) //TODO: Maybe should be omitted
 	}
 }

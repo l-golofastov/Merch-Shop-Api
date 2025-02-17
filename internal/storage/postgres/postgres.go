@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/l-golofastov/Merch-Shop-Api/internal/config"
+	"github.com/l-golofastov/Merch-Shop-Api/internal/lib/datatype/pair"
 	"github.com/l-golofastov/Merch-Shop-Api/internal/storage"
 	_ "github.com/lib/pq"
 )
@@ -22,51 +23,147 @@ func New(cfg config.Postgres) (*Storage, error) {
 		return nil, fmt.Errorf("%s %w", op, err)
 	}
 
-	prepare, err := db.Prepare(`
-	CREATE TABLE IF NOT EXISTS users (
-		id SERIAL PRIMARY KEY,
-		username VARCHAR(255) UNIQUE NOT NULL,
-		password_hash VARCHAR(255) NOT NULL,
-		coins INTEGER NOT NULL DEFAULT 1000 CHECK (coins >= 0),
-		created_at TIMESTAMP NOT NULL DEFAULT NOW()
-	);
-	
-	CREATE TABLE IF NOT EXISTS merch (
-		id SERIAL PRIMARY KEY,
-		name VARCHAR(255) UNIQUE NOT NULL,
-		price INTEGER NOT NULL CHECK (price > 0)
-	);
-	INSERT INTO merch (name, price) VALUES
-	('t-shirt', 80), ('cup', 20), ('book', 50),
-	('pen', 10), ('powerbank', 200), ('hoody', 300),
-	('umbrella', 200), ('socks', 10), ('wallet', 50),
-	('pink-hoody', 500);
-	
-	CREATE TABLE IF NOT EXISTS transfers (
-		id SERIAL PRIMARY KEY,
-		from_user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-		to_user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-		amount INTEGER NOT NULL CHECK (amount > 0),
-		created_at TIMESTAMP NOT NULL DEFAULT NOW()
-	);
-	CREATE INDEX idx_transfers_from ON transfers(from_user_id);
-	CREATE INDEX idx_transfers_to ON transfers(to_user_id);
-	
-	CREATE TABLE IF NOT EXISTS purchases (
-		id SERIAL PRIMARY KEY,
-		user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-		merch_id INTEGER REFERENCES merch(id) ON DELETE CASCADE,
-		quantity INTEGER NOT NULL CHECK (quantity > 0),
-		created_at TIMESTAMP NOT NULL DEFAULT NOW()
-	);
-	CREATE INDEX idx_purchases_user ON purchases(user_id);
+	usersStmt, err := db.Prepare(`
+		CREATE TABLE IF NOT EXISTS users (
+			id SERIAL PRIMARY KEY,
+			username VARCHAR(255) UNIQUE NOT NULL,
+			password_hash VARCHAR(255) NOT NULL,
+			coins INTEGER NOT NULL DEFAULT 1000 CHECK (coins >= 0),
+			created_at TIMESTAMP NOT NULL DEFAULT NOW()
+		);
 	`)
 
 	if err != nil {
 		return nil, fmt.Errorf("%s %w", op, err)
 	}
 
-	_, err = prepare.Exec()
+	_, err = usersStmt.Exec()
+	if err != nil {
+		return nil, fmt.Errorf("%s %w", op, err)
+	}
+
+	merchStmt, err := db.Prepare(`
+		CREATE TABLE IF NOT EXISTS merch (
+		id SERIAL PRIMARY KEY,
+		name VARCHAR(255) UNIQUE NOT NULL,
+		price INTEGER NOT NULL CHECK (price > 0)
+		);
+	`)
+
+	if err != nil {
+		return nil, fmt.Errorf("%s %w", op, err)
+	}
+
+	_, err = merchStmt.Exec()
+	if err != nil {
+		return nil, fmt.Errorf("%s %w", op, err)
+	}
+
+	checkMerchStmt, err := db.Prepare(`
+		SELECT * FROM merch;
+	`)
+
+	if err != nil {
+		return nil, fmt.Errorf("%s %w", op, err)
+	}
+
+	_, err = checkMerchStmt.Exec()
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			merchInsertStmt, err := db.Prepare(`
+				INSERT INTO merch (name, price) VALUES
+				('t-shirt', 80), ('cup', 20), ('book', 50),
+				('pen', 10), ('powerbank', 200), ('hoody', 300),
+				('umbrella', 200), ('socks', 10), ('wallet', 50),
+				('pink-hoody', 500);
+			`)
+
+			if err != nil {
+				return nil, fmt.Errorf("%s %w", op, err)
+			}
+
+			_, err = merchInsertStmt.Exec()
+			if err != nil {
+				return nil, fmt.Errorf("%s %w", op, err)
+			}
+		} else {
+			return nil, fmt.Errorf("%s %w", op, err)
+		}
+	}
+
+	purchasesStmt, err := db.Prepare(`
+		CREATE TABLE IF NOT EXISTS purchases (
+			id SERIAL PRIMARY KEY,
+			user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+			merch_id INTEGER REFERENCES merch(id) ON DELETE CASCADE,
+			quantity INTEGER NOT NULL CHECK (quantity > 0),
+			created_at TIMESTAMP NOT NULL DEFAULT NOW()
+		);
+	`)
+
+	if err != nil {
+		return nil, fmt.Errorf("%s %w", op, err)
+	}
+
+	_, err = purchasesStmt.Exec()
+	if err != nil {
+		return nil, fmt.Errorf("%s %w", op, err)
+	}
+
+	purchasesIndexStmt, err := db.Prepare(`
+		CREATE INDEX IF NOT EXISTS idx_purchases_user ON purchases(user_id);
+	`)
+
+	if err != nil {
+		return nil, fmt.Errorf("%s %w", op, err)
+	}
+
+	_, err = purchasesIndexStmt.Exec()
+	if err != nil {
+		return nil, fmt.Errorf("%s %w", op, err)
+	}
+
+	transfersStmt, err := db.Prepare(`
+		CREATE TABLE IF NOT EXISTS transfers (
+			id SERIAL PRIMARY KEY,
+			from_user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+			to_user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+			amount INTEGER NOT NULL CHECK (amount > 0),
+			created_at TIMESTAMP NOT NULL DEFAULT NOW()
+		);
+	`)
+
+	if err != nil {
+		return nil, fmt.Errorf("%s %w", op, err)
+	}
+
+	_, err = transfersStmt.Exec()
+	if err != nil {
+		return nil, fmt.Errorf("%s %w", op, err)
+	}
+
+	indexFromStmt, err := db.Prepare(`
+		CREATE INDEX IF NOT EXISTS idx_transfers_from ON transfers(from_user_id);
+	`)
+
+	if err != nil {
+		return nil, fmt.Errorf("%s %w", op, err)
+	}
+
+	_, err = indexFromStmt.Exec()
+	if err != nil {
+		return nil, fmt.Errorf("%s %w", op, err)
+	}
+
+	indexToStmt, err := db.Prepare(`
+		CREATE INDEX IF NOT EXISTS idx_transfers_to ON transfers(to_user_id);
+	`)
+
+	if err != nil {
+		return nil, fmt.Errorf("%s %w", op, err)
+	}
+
+	_, err = indexToStmt.Exec()
 	if err != nil {
 		return nil, fmt.Errorf("%s %w", op, err)
 	}
@@ -113,6 +210,22 @@ func (s *Storage) CheckPassword(username, passwordHash string) (int, error) {
 	return userId, nil
 }
 
+func (s *Storage) UpdateUserPasswordHash(id int, hash string) error {
+	const op = "storage.postgres.UpdateUserPasswordHash"
+
+	stmt, err := s.db.Prepare(`UPDATE users SET password_hash=$1 WHERE id=$2;`)
+	if err != nil {
+		return fmt.Errorf("%s %w", op, err)
+	}
+
+	_, err = stmt.Exec(hash, id)
+	if err != nil {
+		return fmt.Errorf("%s %w", op, err)
+	}
+
+	return nil
+}
+
 func (s *Storage) FindUserByUsername(username string) (int, error) {
 	const op = "storage.postgres.FindUserByUsername"
 
@@ -132,6 +245,27 @@ func (s *Storage) FindUserByUsername(username string) (int, error) {
 	}
 
 	return userId, nil
+}
+
+func (s *Storage) GetPasswordHashByUsername(username string) (string, error) {
+	const op = "storage.postgres.GetPasswordHashByUsername"
+
+	var hash string
+
+	stmt, err := s.db.Prepare(`SELECT password_hash FROM users WHERE username = $1;`)
+	if err != nil {
+		return "", fmt.Errorf("%s %w", op, err)
+	}
+
+	err = stmt.QueryRow(username).Scan(&hash)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", storage.ErrUserNotFound
+		}
+		return "", fmt.Errorf("%s %w", op, err)
+	}
+
+	return hash, nil
 }
 
 func (s *Storage) GetUserCoins(id int) (int, error) {
@@ -157,8 +291,10 @@ func (s *Storage) GetUserPurchases(id int) (map[string]int, error) {
 
 	inventory := make(map[string]int)
 
-	stmt, err := s.db.Prepare(`SELECT m.name, p.quantity FROM purchases AS p JOIN merch AS m ON p.merch_id = m.id
-    								 p.user_id = $1;`)
+	stmt, err := s.db.Prepare(`
+		SELECT m.name, p.quantity FROM purchases AS p JOIN merch AS m ON p.merch_id = m.id
+		WHERE p.user_id = $1;
+	`)
 	if err != nil {
 		return nil, fmt.Errorf("%s %w", op, err)
 	}
@@ -186,13 +322,15 @@ func (s *Storage) GetUserPurchases(id int) (map[string]int, error) {
 	return inventory, nil
 }
 
-func (s *Storage) GetUserReceivedCoins(id int) (map[string]int, error) {
+func (s *Storage) GetUserReceivedCoins(id int) ([]pair.Pair[string, int], error) {
 	const op = "storage.postgres.GetUserReceivedCoins"
 
-	getFromMap := make(map[string]int)
+	getFromSlice := make([]pair.Pair[string, int], 0)
 
-	stmt, err := s.db.Prepare(`SELECT u.username, t.amount FROM transfers AS t JOIN users AS u ON t.from_user_id = u.id
-    								 WHERE t.to_user_id = $1;`)
+	stmt, err := s.db.Prepare(`
+		SELECT u.username, t.amount FROM transfers AS t JOIN users AS u ON t.from_user_id = u.id
+		WHERE t.to_user_id = $1;
+	`)
 	if err != nil {
 		return nil, fmt.Errorf("%s %w", op, err)
 	}
@@ -210,23 +348,25 @@ func (s *Storage) GetUserReceivedCoins(id int) (map[string]int, error) {
 		if err != nil {
 			return nil, fmt.Errorf("%s %w", op, err)
 		}
-		getFromMap[usernameFrom] = quantity
+		getFromSlice = append(getFromSlice, pair.Pair[string, int]{Fst: usernameFrom, Snd: quantity})
 	}
 
 	if err = rows.Err(); err != nil {
 		return nil, fmt.Errorf("%s %w", op, err)
 	}
 
-	return getFromMap, nil
+	return getFromSlice, nil
 }
 
-func (s *Storage) GetUserSentCoins(id int) (map[string]int, error) {
+func (s *Storage) GetUserSentCoins(id int) ([]pair.Pair[string, int], error) {
 	const op = "storage.postgres.GetUserSentCoins"
 
-	sentToMap := make(map[string]int)
+	sentToSlice := make([]pair.Pair[string, int], 0)
 
-	stmt, err := s.db.Prepare(`SELECT u.username, t.amount FROM transfers AS t JOIN users AS u ON t.to_user_id = u.id
-    								 WHERE t.from_user_id = $1;`)
+	stmt, err := s.db.Prepare(`
+		SELECT u.username, t.amount FROM transfers AS t JOIN users AS u ON t.to_user_id = u.id
+		WHERE t.from_user_id = $1;
+	`)
 	if err != nil {
 		return nil, fmt.Errorf("%s %w", op, err)
 	}
@@ -244,14 +384,14 @@ func (s *Storage) GetUserSentCoins(id int) (map[string]int, error) {
 		if err != nil {
 			return nil, fmt.Errorf("%s %w", op, err)
 		}
-		sentToMap[usernameTo] = quantity
+		sentToSlice = append(sentToSlice, pair.Pair[string, int]{Fst: usernameTo, Snd: quantity})
 	}
 
 	if err = rows.Err(); err != nil {
 		return nil, fmt.Errorf("%s %w", op, err)
 	}
 
-	return sentToMap, nil
+	return sentToSlice, nil
 }
 
 func (s *Storage) SendCoins(username string, id, amount int) error {
@@ -279,18 +419,38 @@ func (s *Storage) SendCoins(username string, id, amount int) error {
 	coinsFromNew := coinsFrom - amount
 	coinsToNew := coinsTo + amount
 
-	stmt, err := s.db.Prepare(`
+	insertTransfersStmt, err := s.db.Prepare(`
 		INSERT INTO transfers (from_user_id, to_user_id, amount) VALUES ($1, $2, $3);
-
-		UPDATE users SET coins = $4 WHERE id = $1;
-		
-		UPDATE users SET coins = $5 WHERE id = $2;
 	`)
 	if err != nil {
 		return fmt.Errorf("%s %w", op, err)
 	}
 
-	_, err = stmt.Exec(id, toId, amount, coinsFromNew, coinsToNew)
+	_, err = insertTransfersStmt.Exec(id, toId, amount)
+	if err != nil {
+		return fmt.Errorf("%s %w", op, err)
+	}
+
+	updateSenderStmt, err := s.db.Prepare(`
+		UPDATE users SET coins = $1 WHERE id = $2;
+	`)
+	if err != nil {
+		return fmt.Errorf("%s %w", op, err)
+	}
+
+	_, err = updateSenderStmt.Exec(coinsFromNew, id)
+	if err != nil {
+		return fmt.Errorf("%s %w", op, err)
+	}
+
+	updateReceiverStmt, err := s.db.Prepare(`
+		UPDATE users SET coins = $1 WHERE id = $2;
+	`)
+	if err != nil {
+		return fmt.Errorf("%s %w", op, err)
+	}
+
+	_, err = updateReceiverStmt.Exec(coinsToNew, toId)
 	if err != nil {
 		return fmt.Errorf("%s %w", op, err)
 	}
@@ -371,30 +531,50 @@ func (s *Storage) BuyItem(itemName string, userId int) error {
 	}
 
 	if lineId != -1 {
-		stmt, err := s.db.Prepare(`
+		updatePurchasesStmt, err := s.db.Prepare(`
 			UPDATE purchases SET quantity = quantity + 1 WHERE id = $1;
-			
-			UPDATE users SET coins = $2 WHERE id = $3;
 		`)
 		if err != nil {
 			return fmt.Errorf("%s %w", op, err)
 		}
 
-		_, err = stmt.Exec(lineId, userCoinsNew, userId)
+		_, err = updatePurchasesStmt.Exec(lineId)
+		if err != nil {
+			return fmt.Errorf("%s %w", op, err)
+		}
+
+		updateUsersStmt, err := s.db.Prepare(`
+			UPDATE users SET coins = $1 WHERE id = $2;
+		`)
+		if err != nil {
+			return fmt.Errorf("%s %w", op, err)
+		}
+
+		_, err = updateUsersStmt.Exec(userCoinsNew, userId)
 		if err != nil {
 			return fmt.Errorf("%s %w", op, err)
 		}
 	} else {
-		stmt, err := s.db.Prepare(`
+		insertPurchasesStmt, err := s.db.Prepare(`
 			INSERT INTO purchases (user_id, merch_id, quantity) VALUES ($1, (SELECT id FROM merch WHERE name = $2), 1);
-			
-			UPDATE users SET coins = $3 WHERE id = $1;
 		`)
 		if err != nil {
 			return fmt.Errorf("%s %w", op, err)
 		}
 
-		_, err = stmt.Exec(userId, itemName, userCoinsNew)
+		_, err = insertPurchasesStmt.Exec(userId, itemName)
+		if err != nil {
+			return fmt.Errorf("%s %w", op, err)
+		}
+
+		updateUsersStmt, err := s.db.Prepare(`
+			UPDATE users SET coins = $1 WHERE id = $2;
+		`)
+		if err != nil {
+			return fmt.Errorf("%s %w", op, err)
+		}
+
+		_, err = updateUsersStmt.Exec(userCoinsNew, userId)
 		if err != nil {
 			return fmt.Errorf("%s %w", op, err)
 		}

@@ -28,6 +28,11 @@ func NewBuyerHandler(log *slog.Logger, b Buyer) http.HandlerFunc {
 		)
 
 		id, _, _ := handlers.Authorize(w, r, b)
+		if id != 0 {
+			log.Info("user authorized")
+		} else {
+			return
+		}
 
 		log.Info("user authorized")
 
@@ -63,6 +68,5 @@ func NewBuyerHandler(log *slog.Logger, b Buyer) http.HandlerFunc {
 		}
 
 		render.Status(r, http.StatusOK)
-		render.JSON(w, r, nil) //TODO: Maybe should be omitted
 	}
 }
