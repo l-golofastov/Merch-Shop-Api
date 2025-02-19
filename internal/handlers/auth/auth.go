@@ -23,10 +23,10 @@ type AuthResponse struct {
 	Token string `json:"token"`
 }
 
+//go:generate go run github.com/vektra/mockery/v2@v2.52.2 --name=AuthHandler
 type AuthHandler interface {
 	CreateUser(username, passwordHash string) (int, error)
 	FindUserByUsername(username string) (int, error)
-	CheckPassword(username, passwordHash string) (int, error)
 	GetPasswordHashByUsername(username string) (string, error)
 	UpdateUserPasswordHash(id int, hash string) error
 }
@@ -46,7 +46,7 @@ func NewAuthHandler(log *slog.Logger, ah AuthHandler) http.HandlerFunc {
 		if err != nil {
 			log.Error("failed to decode request body", sl.Err(err))
 
-			render.Status(r, http.StatusInternalServerError)
+			render.Status(r, http.StatusBadRequest)
 			render.JSON(w, r, errresp.Error("failed to decode request body"))
 
 			return
@@ -58,7 +58,7 @@ func NewAuthHandler(log *slog.Logger, ah AuthHandler) http.HandlerFunc {
 			log.Error("failed to validate request: not all required fields are provided", sl.Err(err))
 
 			render.Status(r, http.StatusBadRequest)
-			render.JSON(w, r, errresp.Error("failed to validate request: not all required fields are provided"))
+			render.JSON(w, r, errresp.Error("not all required fields are provided"))
 
 			return
 		}
@@ -68,7 +68,7 @@ func NewAuthHandler(log *slog.Logger, ah AuthHandler) http.HandlerFunc {
 			log.Error("failed to get password hash", sl.Err(err))
 
 			render.Status(r, http.StatusInternalServerError)
-			render.JSON(w, r, errresp.Error("failed to get password hash"))
+			render.JSON(w, r, errresp.Error("internal server error"))
 
 			return
 		}
@@ -80,7 +80,7 @@ func NewAuthHandler(log *slog.Logger, ah AuthHandler) http.HandlerFunc {
 			log.Error("failed to find user by username", sl.Err(err))
 
 			render.Status(r, http.StatusInternalServerError)
-			render.JSON(w, r, errresp.Error("failed to find user by username"))
+			render.JSON(w, r, errresp.Error("internal server error"))
 
 			return
 		}
@@ -91,7 +91,7 @@ func NewAuthHandler(log *slog.Logger, ah AuthHandler) http.HandlerFunc {
 				log.Error("failed to get user password hash", sl.Err(err))
 
 				render.Status(r, http.StatusInternalServerError)
-				render.JSON(w, r, errresp.Error("failed to get user password hash"))
+				render.JSON(w, r, errresp.Error("internal server error"))
 
 				return
 			}
@@ -108,7 +108,7 @@ func NewAuthHandler(log *slog.Logger, ah AuthHandler) http.HandlerFunc {
 				log.Error("failed to update user password hash", sl.Err(err))
 
 				render.Status(r, http.StatusInternalServerError)
-				render.JSON(w, r, errresp.Error("failed to update user password hash"))
+				render.JSON(w, r, errresp.Error("internal server error"))
 
 				return
 			}
@@ -118,7 +118,7 @@ func NewAuthHandler(log *slog.Logger, ah AuthHandler) http.HandlerFunc {
 				log.Error("failed to create user", sl.Err(err))
 
 				render.Status(r, http.StatusInternalServerError)
-				render.JSON(w, r, errresp.Error("failed to create user"))
+				render.JSON(w, r, errresp.Error("internal server error"))
 
 				return
 			}
