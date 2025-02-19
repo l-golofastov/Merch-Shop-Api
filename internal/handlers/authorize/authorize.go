@@ -1,4 +1,4 @@
-package handlers
+package authorize
 
 import (
 	"errors"
@@ -26,7 +26,7 @@ func Authorize(w http.ResponseWriter, r *http.Request, a Authorizer) (int, strin
 			return 0, "", ""
 		}
 		render.Status(r, http.StatusInternalServerError)
-		render.JSON(w, r, errresp.Error("failed to check user password"))
+		render.JSON(w, r, errresp.Error("internal server error"))
 
 		return 0, "", ""
 	}

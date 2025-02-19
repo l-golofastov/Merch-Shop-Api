@@ -5,7 +5,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
 	"github.com/go-playground/validator/v10"
-	"github.com/l-golofastov/Merch-Shop-Api/internal/handlers"
+	"github.com/l-golofastov/Merch-Shop-Api/internal/handlers/authorize"
 	"github.com/l-golofastov/Merch-Shop-Api/internal/lib/api/errresp"
 	"github.com/l-golofastov/Merch-Shop-Api/internal/lib/logger/sl"
 	"github.com/l-golofastov/Merch-Shop-Api/internal/storage"
@@ -32,7 +32,7 @@ func NewCoinSenderHandler(log *slog.Logger, cs CoinSender) http.HandlerFunc {
 			slog.String("request_id", middleware.GetReqID(r.Context())),
 		)
 
-		id, _, _ := handlers.Authorize(w, r, cs)
+		id, _, _ := authorize.Authorize(w, r, cs)
 		if id != 0 {
 			log.Info("user authorized")
 		} else {

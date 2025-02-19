@@ -32,14 +32,14 @@ func TestAuthHandler(t *testing.T) {
 		respError     string
 	}{
 		{
-			name:        "SuccessCreatingNewUser",
+			name:        "Success creating new user",
 			username:    "testuser",
 			password:    "testpassword",
 			findUserId:  -1,
 			findUserErr: storage.ErrUserNotFound,
 		},
 		{
-			name:        "ErrorFindingUser",
+			name:        "Error finding user",
 			username:    "testuser",
 			password:    "testpassword",
 			findUserId:  -1,
@@ -47,7 +47,7 @@ func TestAuthHandler(t *testing.T) {
 			respError:   "internal server error",
 		},
 		{
-			name:          "ErrorCreatingUser",
+			name:          "Error creating user",
 			username:      "testuser",
 			password:      "testpassword",
 			findUserId:    -1,
@@ -56,28 +56,28 @@ func TestAuthHandler(t *testing.T) {
 			respError:     "internal server error",
 		},
 		{
-			name:      "EmptyUsername",
+			name:      "Empty username",
 			password:  "testpassword",
 			respError: "not all required fields are provided",
 		},
 		{
-			name:      "EmptyPassword",
+			name:      "Empty password",
 			username:  "testuser",
 			respError: "not all required fields are provided",
 		},
 		{
-			name:      "EmptyUsernameAndPassword",
+			name:      "Empty username and password",
 			respError: "not all required fields are provided",
 		},
 		{
-			name:          "SuccessUpdatingUserPasswordHash",
+			name:          "Success updating user password hash",
 			username:      "testuser",
 			password:      "testpassword",
 			findUserId:    1,
 			passwordValid: true,
 		},
 		{
-			name:          "ErrorComparingHashAndPassword",
+			name:          "Error comparing hash and password",
 			username:      "testuser",
 			password:      "testpassword",
 			findUserId:    1,
@@ -85,7 +85,7 @@ func TestAuthHandler(t *testing.T) {
 			respError:     "invalid password",
 		},
 		{
-			name:          "ErrorGettingPasswordHash",
+			name:          "Error getting password hash",
 			username:      "testuser",
 			password:      "testpassword",
 			findUserId:    1,
@@ -94,7 +94,7 @@ func TestAuthHandler(t *testing.T) {
 			respError:     "internal server error",
 		},
 		{
-			name:          "ErrorUpdatingPasswordHash",
+			name:          "Error updating password hash",
 			username:      "testuser",
 			password:      "testpassword",
 			findUserId:    1,
@@ -160,14 +160,12 @@ func TestAuthHandler(t *testing.T) {
 				require.Equal(t, http.StatusBadRequest, rr.Code)
 
 				var resp errresp.ErrorResponse
-
 				require.NoError(t, json.Unmarshal([]byte(body), &resp))
 				require.Equal(t, resp.Error, tc.respError)
 			} else if tc.findUserErr != nil && !errors.Is(tc.findUserErr, storage.ErrUserNotFound) {
 				require.Equal(t, http.StatusInternalServerError, rr.Code)
 
 				var resp errresp.ErrorResponse
-
 				require.NoError(t, json.Unmarshal([]byte(body), &resp))
 				require.Equal(t, resp.Error, tc.respError)
 			} else if tc.findUserId != -1 {
@@ -175,28 +173,24 @@ func TestAuthHandler(t *testing.T) {
 					require.Equal(t, http.StatusInternalServerError, rr.Code)
 
 					var resp errresp.ErrorResponse
-
 					require.NoError(t, json.Unmarshal([]byte(body), &resp))
 					require.Equal(t, resp.Error, tc.respError)
 				} else if !tc.passwordValid {
 					require.Equal(t, http.StatusUnauthorized, rr.Code)
 
 					var resp errresp.ErrorResponse
-
 					require.NoError(t, json.Unmarshal([]byte(body), &resp))
 					require.Equal(t, resp.Error, tc.respError)
 				} else if tc.updateHashErr != nil {
 					require.Equal(t, http.StatusInternalServerError, rr.Code)
 
 					var resp errresp.ErrorResponse
-
 					require.NoError(t, json.Unmarshal([]byte(body), &resp))
 					require.Equal(t, resp.Error, tc.respError)
 				} else {
 					require.Equal(t, http.StatusOK, rr.Code)
 
 					var resp AuthResponse
-
 					require.NoError(t, json.Unmarshal([]byte(body), &resp))
 					require.NotEmpty(t, resp.Token)
 				}
@@ -204,14 +198,12 @@ func TestAuthHandler(t *testing.T) {
 				require.Equal(t, http.StatusInternalServerError, rr.Code)
 
 				var resp errresp.ErrorResponse
-
 				require.NoError(t, json.Unmarshal([]byte(body), &resp))
 				require.Equal(t, resp.Error, tc.respError)
 			} else {
 				require.Equal(t, http.StatusOK, rr.Code)
 
 				var resp AuthResponse
-
 				require.NoError(t, json.Unmarshal([]byte(body), &resp))
 				require.NotEmpty(t, resp.Token)
 			}

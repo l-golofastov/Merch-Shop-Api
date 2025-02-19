@@ -5,7 +5,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
-	"github.com/l-golofastov/Merch-Shop-Api/internal/handlers"
+	"github.com/l-golofastov/Merch-Shop-Api/internal/handlers/authorize"
 	"github.com/l-golofastov/Merch-Shop-Api/internal/lib/api/errresp"
 	"github.com/l-golofastov/Merch-Shop-Api/internal/lib/logger/sl"
 	"github.com/l-golofastov/Merch-Shop-Api/internal/storage"
@@ -27,7 +27,7 @@ func NewBuyerHandler(log *slog.Logger, b Buyer) http.HandlerFunc {
 			slog.String("request_id", middleware.GetReqID(r.Context())),
 		)
 
-		id, _, _ := handlers.Authorize(w, r, b)
+		id, _, _ := authorize.Authorize(w, r, b)
 		if id != 0 {
 			log.Info("user authorized")
 		} else {

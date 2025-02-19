@@ -3,7 +3,7 @@ package info
 import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
-	"github.com/l-golofastov/Merch-Shop-Api/internal/handlers"
+	"github.com/l-golofastov/Merch-Shop-Api/internal/handlers/authorize"
 	"github.com/l-golofastov/Merch-Shop-Api/internal/lib/api/errresp"
 	"github.com/l-golofastov/Merch-Shop-Api/internal/lib/datatype/pair"
 	"github.com/l-golofastov/Merch-Shop-Api/internal/lib/logger/sl"
@@ -37,6 +37,7 @@ type SentCoins struct {
 	Amount int    `json:"amount"`
 }
 
+//go:generate go run github.com/vektra/mockery/v2@v2.52.2 --name=InfoHandler
 type InfoHandler interface {
 	CheckPassword(username, passwordHash string) (int, error)
 	GetUserCoins(id int) (int, error)
@@ -54,21 +55,19 @@ func NewInfoHandler(log *slog.Logger, ih InfoHandler) http.HandlerFunc {
 			slog.String("request_id", middleware.GetReqID(r.Context())),
 		)
 
-		id, _, _ := handlers.Authorize(w, r, ih)
+		id, _, _ := authorize.Authorize(w, r, ih)
 		if id != 0 {
 			log.Info("user authorized")
 		} else {
 			return
 		}
 
-		log.Info("user authorized")
-
 		coins, err := ih.GetUserCoins(id)
 		if err != nil {
 			log.Error("failed to get user coins", sl.Err(err))
 
 			render.Status(r, http.StatusInternalServerError)
-			render.JSON(w, r, errresp.Error("failed to get user coins"))
+			render.JSON(w, r, errresp.Error("internal server error"))
 
 			return
 		}
@@ -78,7 +77,7 @@ func NewInfoHandler(log *slog.Logger, ih InfoHandler) http.HandlerFunc {
 			log.Error("failed to get user purchases", sl.Err(err))
 
 			render.Status(r, http.StatusInternalServerError)
-			render.JSON(w, r, errresp.Error("failed to get user purchases"))
+			render.JSON(w, r, errresp.Error("internal server error"))
 
 			return
 		}
@@ -88,7 +87,7 @@ func NewInfoHandler(log *slog.Logger, ih InfoHandler) http.HandlerFunc {
 			log.Error("failed to get user received coins", sl.Err(err))
 
 			render.Status(r, http.StatusInternalServerError)
-			render.JSON(w, r, errresp.Error("failed to get user received coins"))
+			render.JSON(w, r, errresp.Error("internal server error"))
 
 			return
 		}
@@ -98,7 +97,7 @@ func NewInfoHandler(log *slog.Logger, ih InfoHandler) http.HandlerFunc {
 			log.Error("failed to get user sent coins", sl.Err(err))
 
 			render.Status(r, http.StatusInternalServerError)
-			render.JSON(w, r, errresp.Error("failed to get user sent coins"))
+			render.JSON(w, r, errresp.Error("internal server error"))
 
 			return
 		}
