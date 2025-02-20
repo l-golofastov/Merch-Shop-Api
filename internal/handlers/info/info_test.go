@@ -16,7 +16,7 @@ import (
 	"testing"
 )
 
-func TestAuthHandler(t *testing.T) {
+func TestInfoHandler(t *testing.T) {
 	userId := 4
 	username := "testuser"
 	password := "testpassword"

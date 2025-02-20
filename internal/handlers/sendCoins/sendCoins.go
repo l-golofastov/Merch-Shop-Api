@@ -15,9 +15,10 @@ import (
 
 type SendCoinRequest struct {
 	ToUser string `json:"toUser" validate:"required"`
-	Amount int    `json:"amount" validate:"required"`
+	Amount int    `json:"amount" validate:"required,gt=0"`
 }
 
+//go:generate go run github.com/vektra/mockery/v2@v2.52.2 --name=CoinSender
 type CoinSender interface {
 	CheckPassword(username, passwordHash string) (int, error)
 	SendCoins(username string, id, amount int) error
@@ -54,10 +55,10 @@ func NewCoinSenderHandler(log *slog.Logger, cs CoinSender) http.HandlerFunc {
 		log.Info("request body decoded", slog.Any("request", req))
 
 		if err = validator.New().Struct(req); err != nil {
-			log.Error("failed to validate request: not all required fields are provided", sl.Err(err))
+			log.Error("failed to validate request body: not all required fields are provided", sl.Err(err))
 
 			render.Status(r, http.StatusBadRequest)
-			render.JSON(w, r, errresp.Error("failed to validate request: not all required fields are provided"))
+			render.JSON(w, r, errresp.Error("failed to validate request body: not all required fields are provided or amount of coins <= 0"))
 
 			return
 		}
@@ -78,7 +79,7 @@ func NewCoinSenderHandler(log *slog.Logger, cs CoinSender) http.HandlerFunc {
 			log.Error("failed to send coins", sl.Err(err))
 
 			render.Status(r, http.StatusInternalServerError)
-			render.JSON(w, r, errresp.Error("failed to send coins"))
+			render.JSON(w, r, errresp.Error("internal server error"))
 
 			return
 		}

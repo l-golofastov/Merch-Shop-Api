@@ -13,6 +13,7 @@ import (
 	"net/http"
 )
 
+//go:generate go run github.com/vektra/mockery/v2@v2.52.2 --name=Buyer
 type Buyer interface {
 	CheckPassword(username, passwordHash string) (int, error)
 	BuyItem(itemName string, userId int) error
@@ -33,8 +34,6 @@ func NewBuyerHandler(log *slog.Logger, b Buyer) http.HandlerFunc {
 		} else {
 			return
 		}
-
-		log.Info("user authorized")
 
 		itemName := chi.URLParam(r, "item")
 		if itemName == "" {
