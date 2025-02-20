@@ -20,7 +20,7 @@ type HttpServer struct {
 
 type Postgres struct {
 	Host     string `envconfig:"POSTGRES_HOST"`
-	Port     int    `envconfig:"POSTGRES_PORT"`
+	Port     string `envconfig:"POSTGRES_PORT"`
 	Username string `envconfig:"POSTGRES_USERNAME"`
 	Password string `envconfig:"POSTGRES_PASSWORD"`
 	DBName   string `envconfig:"POSTGRES_DBNAME"`

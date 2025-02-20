@@ -41,6 +41,7 @@ func main() {
 	router.Get("/api/info", jwtlib.JWTMiddleware(info.NewInfoHandler(log, storage)))
 	router.Post("/api/sendCoin", jwtlib.JWTMiddleware(sendCoins.NewCoinSenderHandler(log, storage)))
 	router.Get("/api/buy/{item}", jwtlib.JWTMiddleware(buy.NewBuyerHandler(log, storage)))
+	router.Get("/api/buy/", jwtlib.JWTMiddleware(buy.NewBuyerHandler(log, storage)))
 
 	srv := &http.Server{
 		Addr:         cfg.ServerAddress,

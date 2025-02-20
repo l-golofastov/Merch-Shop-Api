@@ -17,7 +17,7 @@ type Storage struct {
 func New(cfg config.Postgres) (*Storage, error) {
 	const op = "storage.postgres.New"
 
-	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", cfg.Host, cfg.Port, cfg.Username, cfg.Password, cfg.DBName)
+	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", cfg.Host, cfg.Port, cfg.Username, cfg.Password, cfg.DBName)
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		return nil, fmt.Errorf("%s %w", op, err)
@@ -32,7 +32,6 @@ func New(cfg config.Postgres) (*Storage, error) {
 			created_at TIMESTAMP NOT NULL DEFAULT NOW()
 		);
 	`)
-
 	if err != nil {
 		return nil, fmt.Errorf("%s %w", op, err)
 	}
@@ -49,7 +48,6 @@ func New(cfg config.Postgres) (*Storage, error) {
 		price INTEGER NOT NULL CHECK (price > 0)
 		);
 	`)
-
 	if err != nil {
 		return nil, fmt.Errorf("%s %w", op, err)
 	}
@@ -59,34 +57,26 @@ func New(cfg config.Postgres) (*Storage, error) {
 		return nil, fmt.Errorf("%s %w", op, err)
 	}
 
-	checkMerchStmt, err := db.Prepare(`
-		SELECT * FROM merch;
-	`)
-
+	var exists bool
+	err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM merch)").Scan(&exists)
 	if err != nil {
 		return nil, fmt.Errorf("%s %w", op, err)
 	}
 
-	_, err = checkMerchStmt.Exec()
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			merchInsertStmt, err := db.Prepare(`
+	if !exists {
+		merchInsertStmt, err := db.Prepare(`
 				INSERT INTO merch (name, price) VALUES
 				('t-shirt', 80), ('cup', 20), ('book', 50),
 				('pen', 10), ('powerbank', 200), ('hoody', 300),
 				('umbrella', 200), ('socks', 10), ('wallet', 50),
 				('pink-hoody', 500);
 			`)
+		if err != nil {
+			return nil, fmt.Errorf("%s %w", op, err)
+		}
 
-			if err != nil {
-				return nil, fmt.Errorf("%s %w", op, err)
-			}
-
-			_, err = merchInsertStmt.Exec()
-			if err != nil {
-				return nil, fmt.Errorf("%s %w", op, err)
-			}
-		} else {
+		_, err = merchInsertStmt.Exec()
+		if err != nil {
 			return nil, fmt.Errorf("%s %w", op, err)
 		}
 	}
@@ -100,7 +90,6 @@ func New(cfg config.Postgres) (*Storage, error) {
 			created_at TIMESTAMP NOT NULL DEFAULT NOW()
 		);
 	`)
-
 	if err != nil {
 		return nil, fmt.Errorf("%s %w", op, err)
 	}
@@ -113,7 +102,6 @@ func New(cfg config.Postgres) (*Storage, error) {
 	purchasesIndexStmt, err := db.Prepare(`
 		CREATE INDEX IF NOT EXISTS idx_purchases_user ON purchases(user_id);
 	`)
-
 	if err != nil {
 		return nil, fmt.Errorf("%s %w", op, err)
 	}
@@ -132,7 +120,6 @@ func New(cfg config.Postgres) (*Storage, error) {
 			created_at TIMESTAMP NOT NULL DEFAULT NOW()
 		);
 	`)
-
 	if err != nil {
 		return nil, fmt.Errorf("%s %w", op, err)
 	}
@@ -145,7 +132,6 @@ func New(cfg config.Postgres) (*Storage, error) {
 	indexFromStmt, err := db.Prepare(`
 		CREATE INDEX IF NOT EXISTS idx_transfers_from ON transfers(from_user_id);
 	`)
-
 	if err != nil {
 		return nil, fmt.Errorf("%s %w", op, err)
 	}
@@ -158,7 +144,6 @@ func New(cfg config.Postgres) (*Storage, error) {
 	indexToStmt, err := db.Prepare(`
 		CREATE INDEX IF NOT EXISTS idx_transfers_to ON transfers(to_user_id);
 	`)
-
 	if err != nil {
 		return nil, fmt.Errorf("%s %w", op, err)
 	}
