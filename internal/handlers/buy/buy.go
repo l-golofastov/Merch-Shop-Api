@@ -48,7 +48,7 @@ func NewBuyerHandler(log *slog.Logger, b Buyer) http.HandlerFunc {
 		err := b.BuyItem(itemName, id)
 		if err != nil {
 			if errors.Is(err, storage.ErrItemNotFound) {
-				log.Info("item not found: ", itemName)
+				log.Info("item not found")
 
 				render.Status(r, http.StatusBadRequest)
 				render.JSON(w, r, errresp.Error("item not found"))

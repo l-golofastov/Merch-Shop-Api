@@ -1,18 +1,20 @@
-ifneq (,$(wildcard ./.env))
-	include .env
-	export
-endif
+run:
+	docker-compose up --build -d app postgres
 
-test:
-	go test --short -coverprofile=cover.out -v ./...
-	make test.coverage
+down:
+	docker-compose down -v
 
-test.coverage:
-	go tool cover -func=cover.out
+test.unit:
+	go test -v ./... --short
 
 test.integration:
-	docker run --name=testPostgresContainer -p 5556:5432 -e POSTGRES_USER=$(TEST_POSTGRES_USERNAME) -e POSTGRES_PASSWORD=$(TEST_POSTGRES_PASSWORD) -e POSTGRES_DB=$(TEST_POSTGRES_DBNAME) -d --rm postgres
+	docker-compose up -d postgres-test
+	while ! docker-compose exec postgres-test pg_isready -U ${TEST_POSTGRES_USERNAME} -d ${TEST_POSTGRES_DBNAME}; do sleep 1; done
 
-	-go test -v ./tests/
+	-go test -v ./tests
 
-	docker stop testPostgresContainer
+	make down
+
+test:
+	make test.unit
+	make test.integration

@@ -4,6 +4,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
 	"log"
+	"os"
 	"time"
 )
 
@@ -27,8 +28,10 @@ type Postgres struct {
 }
 
 func MustLoad() *Config {
-	if err := godotenv.Load(); err != nil {
-		log.Fatal("Error loading env variables", err)
+	if _, ok := os.LookupEnv("CFG_WITH_DOCKER"); ok != true {
+		if err := godotenv.Load(); err != nil {
+			log.Fatal("Error loading env variables: ", err)
+		}
 	}
 
 	var cfg Config

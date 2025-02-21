@@ -1,0 +1,68 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    env_file: .env
+    environment:
+      - SERVER_ADDRESS=${SERVER_ADDRESS}
+      - SERVER_TIMEOUT=${SERVER_TIMEOUT}
+      - SERVER_IDLE_TIMEOUT=${SERVER_IDLE_TIMEOUT}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USERNAME=${POSTGRES_USERNAME}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DBNAME=${POSTGRES_DBNAME}
+      - JWT_SECRET=${JWT_SECRET}
+      - CFG_WITH_DOCKER=true
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - merch-net
+
+  postgres:
+    image: postgres
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DBNAME}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USERNAME} -d ${POSTGRES_DBNAME}"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    networks:
+      - merch-net
+
+  postgres-test:
+    image: postgres
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${TEST_POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${TEST_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${TEST_POSTGRES_DBNAME}
+    volumes:
+      - postgres-test-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${TEST_POSTGRES_USERNAME} -d ${TEST_POSTGRES_DBNAME}"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "${TEST_POSTGRES_PORT}:5432"
+    networks:
+      - merch-net
+
+volumes:
+  postgres-data:
+  postgres-test-data:
+
+networks:
+  merch-net:
+    driver: bridge
