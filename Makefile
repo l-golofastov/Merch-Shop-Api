@@ -5,7 +5,13 @@ down:
 	docker-compose down -v
 
 test.unit:
-	go test -v ./... --short
+	go test ./... -coverprofile=coverage.out -coverpkg=./... -cover -v | \
+		grep -v 'github.com/l-golofastov/Merch-Shop-Api/internal/handlers/auth/mocks/' | \
+		grep -v 'github.com/l-golofastov/Merch-Shop-Api/internal/handlers/buy/mocks/' | \
+		grep -v 'github.com/l-golofastov/Merch-Shop-Api/internal/handlers/info/mocks/' | \
+		grep -v 'github.com/l-golofastov/Merch-Shop-Api/internal/handlers/sendCoins/mocks/'
+
+	go tool cover -func=coverage.out
 
 test.integration:
 	docker-compose up -d postgres-test
